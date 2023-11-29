@@ -10,7 +10,7 @@ are so many weird tables below.
 local S = minetest.get_translator(minetest.get_current_modname())
 
 -- For after_place_node
-local function setup_breaker(pos)
+local function setup_breaker(pos, placer)
 	-- Set formspec and inventory
 	local form = "size[9,8.75]" ..
 		"label[0,4.0;" .. minetest.formspec_escape(minetest.colorize("#313131", S("Inventory"))) .. "]" ..
@@ -25,6 +25,12 @@ local function setup_breaker(pos)
 		"listring[current_player;main]"
 	local meta = minetest.get_meta(pos)
 	meta:set_string("formspec", form)
+	if placer then
+	-- minetest.chat_send_all(placer:get_player_name())
+		meta:set_string("owner", placer:get_player_name())
+	else
+		meta:set_string("owner", "")
+	end
 	local inv = meta:get_inventory()
 	inv:set_size("main", 4)
 end
@@ -153,12 +159,13 @@ local breakerdef = {
 
 				-- This is a fake player object that the breaker will use
 				-- It may break in testing
+				local own_name = meta:get_string("owner")
 				local breaker_digger = {
 					is_player = function(self)
-						return false
+						return own_name ~= ""
 					end,
 					get_player_name = function(self)
-						return ""
+						return own_name
 					end,
 					get_wielded_item = function(self)
 						return tool
@@ -168,7 +175,7 @@ local breakerdef = {
 						return true
 					end,
 					get_inventory = function(self)
-						return nil
+						return inv
 					end
 				}
 				breaknodedef.on_dig(breakpos, breaknode, breaker_digger)
@@ -188,7 +195,7 @@ horizontal_def._doc_items_longdesc = S("A breaker is a block which acts as a red
 horizontal_def._doc_items_usagehelp = S("Place the breaker in one of 6 possible directions. The “hole” is where the breaker will break from. Use the breaker to access its inventory. Insert the tools you wish to use. Supply the breaker with redstone energy to use the tools on a block.")
 
 function horizontal_def.after_place_node(pos, placer, itemstack, pointed_thing)
-	setup_breaker(pos)
+	setup_breaker(pos, placer)
 	orientate_breaker(pos, placer)
 end
 
